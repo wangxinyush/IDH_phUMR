@@ -10,7 +10,7 @@
 
 * We further found that the phUMR contribute to oncogene activation by the interplay with key chromatin modifications.<br><br>
 ![framework](https://github.com/wangxinyush/IDH_phUMR/blob/main/imgs/oncogene.png "foo")
-* For example, at the promoter of the CCND1 gene, loss of broad H3K27me3 signal and increase of H3K4me3 signal in flanking UMRs were found. Meanwhile, the gene body of CCND1 presented increased H3K36me3 and H3K4me1 signals.
+* For example, at the promoter of the CCND1 gene, loss of broad H3K27me3 signal and increase of H3K4me3 signal in flanking UMRs were found. Meanwhile, the gene body of CCND1 presented increased H3K36me3 and H3K4me1 signals.<br><br>
 ![framework](https://github.com/wangxinyush/IDH_phUMR/blob/main/imgs/track.png "foo")
-* This implies a novel model of oncogene activated by partially methylation erosion in contrast to the classical model of oncogene upregulation by promoter hypomethylation.
+* This implies a novel model of oncogene activated by partially methylation erosion in contrast to the classical model of oncogene upregulation by promoter hypomethylation.<br><br>
 ![framework](https://github.com/wangxinyush/IDH_phUMR/blob/main/imgs/model.png "foo")

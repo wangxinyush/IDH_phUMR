@@ -1,0 +1,317 @@
+#!/usr/bin/perl
+#这个程序用来获取(ref)umrs中的hyper CGs
+#Input1: bed - (ref)UMR 
+#Input2: wig - methylation level
+#Output: 
+#1) Border:
+#2) Proportion: CGs_in_Hyper / all_counts (Type - partially/fully), (not used Hyper_CG_counts / all_counts)
+
+use warnings;
+use strict;
+use File::Basename;
+
+die "
+Usage:
+ perl $0 GM12878_umr.bed /share/pub/wangxy/Annotation/CG/hg38_CpG.txt wig_list.txt >K562_umr_hyper.bed
+" unless @ARGV;
+
+my ($umr_bed_file, $cg_file, $wig_list) = @ARGV;
+
+warn call_time()."Start\n";
+
+#这里的reference CGs到底是用hg38_CG.txt还是根据wig_list.txt重新识别一个呢?
+#可以设置个可选项: ① 从wig_list.txt中获取cg位点. ② 直接使用hg38_CpG.txt / hg19_CpG.txt
+#0. get CG from wig_list.txt
+#输入: wig_list.txt
+#输出: wig_list.txt的CG位点交集
+#暂时不实现该功能 - 因为当CG位点matched不上时，会导致其各个位置存在问题。不适合多个样本之间的整合。
+
+#1.get all CGs in (ref)umrs
+#获取refumr里的CG位点. 
+#输出: %CG_region_hs: chr\tcg => chr start end
+#get refumr region(bed)
+my $ref_head = 0;				#reference has a head?, default: 0
+my $chr_ref_hs_ref = bed_chr_split( $umr_bed_file , $ref_head );  # chr => [start , end]
+#get all reference CG sites
+my $chr_site_hs_ref = CG_chr_split($cg_file);
+#get CG in refumrs
+my %CG_region_hs = (); #"chr\tcg" => "chr\tstart\tend" (region, eg. refumr)
+foreach my $chr(sort keys %{ $chr_ref_hs_ref } ){ #get CG in refumrs for each chromosome.
+	my ($chr_region_CG_ref, $chr_CG_region_ref) = get_region_cg( $chr_ref_hs_ref -> {$chr} , $chr_site_hs_ref -> {$chr}, $chr);
+	foreach my $cg(keys %{ $chr_CG_region_ref }){
+		$CG_region_hs{$cg} = $chr_CG_region_ref -> {$cg};
+	}
+}
+
+warn call_time()."Get methylation level\n";
+#2. get CG methy_level
+#输出: %CG_region_hs: chr\tcg => chr start end methy_control methy_treat
+my @sample_wig_files = get_sample_wigs($wig_list); #读入样本methy文件
+my %methy_matrix_hs = ();
+my $header = "chr\tCG\tchr\tstart\tend\t";
+foreach my $sample_i(0..$#sample_wig_files){  #for each sample. 
+	open IN,"<",$sample_wig_files[$sample_i] or die $!; 
+	my $chr = "0";
+	
+	my %cg_in_refumr_hs = (); #"chr\tcg" => methy_level 在refumr里的CG位点
+	while(<IN>){
+		next if(/track type/);
+		s/[\r\n]$//g;
+		if(/chrom/){ 	#declaration line
+			my @declaration_arrs = split /\s+/;
+			$chr = substr( $declaration_arrs[1], 6 ); #get chr from declaration line, eg. variableStep chrom=chr1
+		}
+		else{
+			my @arr = split ;
+			if(exists $CG_region_hs{"$chr\t$arr[0]"}){ #TCGA, Feinberg
+				$cg_in_refumr_hs{"$chr\t$arr[0]"} = $arr[1];
+			}
+			elsif( exists $CG_region_hs{ "$chr\t".($arr[0]+1) }){ #DKFZ, Roadmap, need to add 1
+				$cg_in_refumr_hs{ "$chr\t".($arr[0]+1) } = $arr[1];
+			}
+		}
+	}
+	#merge into matrix
+	foreach my $cg(keys %CG_region_hs){
+		if(exists $cg_in_refumr_hs{$cg}){
+			$CG_region_hs{$cg} .= "\t".$cg_in_refumr_hs{$cg};
+		}
+		else{
+			$CG_region_hs{$cg} .= "\tNA";
+		}
+	}
+	
+	close IN;
+}
+
+warn call_time()."Print into matrix\n";
+#print into matrix
+#open OUT,">","test4_refumr_CG_methy_matrix.txt" or die $!;
+open OUT,">","tmp_refumr_CG_methy_matrix.txt" or die $!;
+print OUT "chr\tCG\tchr\tstart\tend";
+foreach my $sample_path(@sample_wig_files){
+	my $sample_name = fileparse($sample_path,".wig");
+	print OUT "\t".$sample_name;
+}
+print OUT "\n";
+
+
+foreach my $cg(sort keys %CG_region_hs){
+	print OUT "$cg\t".$CG_region_hs{$cg}."\n";
+}
+close OUT;
+
+warn call_time()."Next...\n";
+
+`sort -k 1,1 -k 2,2n tmp_refumr_CG_methy_matrix.txt >tmp_sort_refumr_CG_methy_matrix.txt`;
+
+#3. 识别边界
+
+
+
+#4. 输出
+
+
+
+=DESCRIPTION CG_chr_split  	[ INDEPENDENT ]
+    * Name: CG_chr_split
+    * Function: split file into chr arrs.
+    * Params: $infile
+    * Return: \@chr_methy_arrs , \@chr_site_arrs
+    * Independence: [ INDEPENDENT ]
+=cut
+
+sub CG_chr_split{
+	my ( $infile ) = @_;
+
+	open IN,"<",$infile;
+	
+	my %chr_site_hs  = ();
+
+	my $chr = "0";
+	while( <IN> ){
+		s/[\r\n]$//g;
+		my ($chr, $site) = split /\t/;
+		if(exists $chr_site_hs{$chr}){
+			push @{ $chr_site_hs{$chr} } , $site;
+		}
+		else{
+			$chr_site_hs{$chr}  = [];
+		}
+	}
+	close IN;
+	return ( \%chr_site_hs );
+}
+
+=Data Description
+@hg19 CG (sorted)
+chr1    10469
+chr1    10471
+chr1    10484
+@refumr (sorted)
+chr1    713543  714842
+chr1    762105  762804
+chr1    804991  805540
+=cut
+=Usage
+my $ref = get_region_cg(\@region,\@site);
+foreach my $i(@$ref){
+	print $i."\n";
+}
+#date: 10/10/2021
+=cut
+#get_region_cg(\@region,\@site)
+sub get_region_cg{
+	my ( $region_ref, $site_ref, $cur_chr ) = @_;
+	
+	my $site_index = 0;
+	my $first_right_site_index =0;
+	
+	my %region_CG_hs = ();
+	my %CG_region_hs = ();
+	
+	foreach my $i(0..$#$region_ref){
+		my ( $start , $end ) = ( $$region_ref[$i][0] , $$region_ref[$i][1] );
+		
+		my $num = 0;
+		while( $$site_ref[$site_index] < $start ){
+			last if ( $site_index >= $#$site_ref );
+			$site_index ++;
+		}#end: maybe the first site in region. (>= start)
+		$first_right_site_index = $site_index ; #mark first mapping site
+
+		while( $$site_ref[$site_index] <= $end ){	#all sites in region. ( >= start and <= end )
+			last if ( $site_index >= $#$site_ref );
+			
+			$region_CG_hs{"$cur_chr\t".$$site_ref[$site_index]} = "";
+			$CG_region_hs{"$cur_chr\t".$$site_ref[$site_index]} = "$cur_chr\t$start\t$end";
+			
+			$num ++;
+			$site_index ++;
+		}#end: out region
+		
+		$site_index = $first_right_site_index ; #to return first mapping site
+	}
+	
+	return (\%region_CG_hs, \%CG_region_hs);
+}
+
+=DESCRIPTION bed_chr_split  	[ INDEPENDENT ]
+    * Name: bed_chr_split
+    * Function: split bed file into chr arrs.
+    * Params: $infile , $has_head
+    * Return: \@chr_bed_hs
+    * Independence: [ INDEPENDENT ]
+=cut
+
+sub bed_chr_split{
+	my ( $infile , $has_head ) = @_;
+	open my $in_fh,"<",$infile or die $infile."\nBed region open error,Please check up this path!\n";
+	
+	#delete the head 
+	if($has_head){
+		<$in_fh>;
+	}
+	
+	my %chr_bed_hs  = ();
+
+	my $chr = "";
+	while( <$in_fh> ){
+		s/[\r\n]$//g;
+		my @arr = split;
+		my ( $curChr, $start, $end ) = @arr[0, 1, 2];
+
+		if($curChr ne $chr){  	# new chromosome
+			$chr = $curChr;
+			$chr_bed_hs{$chr}  = [];
+			push @{ $chr_bed_hs{$chr} } , [ $arr[1], $arr[2] ];
+		}
+		else{
+			push @{ $chr_bed_hs{$chr} } , [ $arr[1], $arr[2] ];
+		}
+	}
+	close $in_fh;
+	return \%chr_bed_hs ;
+}
+
+=DESCRIPTION wig_chr_split  	[ INDEPENDENT ]
+    * Name: wig_chr_split
+    * Function: split file into chr arrs.
+    * Params: $infile
+    * Return: \@chr_methy_arrs , \@chr_site_arrs
+    * Independence: [ INDEPENDENT ]
+=cut
+
+sub wig_chr_split{
+	my ( $infile ) = @_;
+
+	my $in_fh;
+	if( $infile =~ /gz$/ ){
+		open $in_fh,"zcat $infile |" or die $infile."\nwig file open error, Please check up this path!\n";
+	}
+	elsif( $infile =~ /wig$/ ){
+		open $in_fh,"<",$infile or die $infile."\nwig file open error, Please check up this path!\n";
+	}
+	else{
+		die "ERROR: $infile is not .wig or .gz file.\n";
+	}
+	
+	my %chr_site_hs  = ();
+	my %chr_methy_hs = ();
+
+	my $chr = "0";
+	while( <$in_fh> ){
+		next if(/track type/);
+		s/[\r\n]$//g;
+		if(/chrom/){ 	#declaration line
+			my @declaration_arrs = split /\s+/;
+			$chr = substr( $declaration_arrs[1], 6 ); #get chr from declaration line, eg. variableStep chrom=chr1
+			$chr_site_hs{$chr}  = [];
+			$chr_methy_hs{$chr} = [];
+		}
+		else{
+			my @arr = split ;
+			push @{ $chr_site_hs{$chr}  } , $arr[0];
+			push @{ $chr_methy_hs{$chr} } , $arr[1];
+		}
+	}
+	close $in_fh;
+	return ( \%chr_site_hs , \%chr_methy_hs );
+}
+
+#get current time [hour:min:sec month,mday]
+sub call_time{
+	my $tab_nums = 0; #DEFAULT: has no tab 
+	$tab_nums = $_[0] if ($_[0]);
+
+	my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime;
+	my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+	#my @weeks = qw(Sun Mon Tue Wed Thu Fri Sat);
+	#$year += 1900;
+	
+	return "[$hour:$min:$sec $months[$mon],$mday] ".("   " x $tab_nums);
+}
+
+sub get_sample_wigs{
+	my ( $wig_list ) = @_ ;
+
+	my @sample_wig_files = ();
+	if( $wig_list =~ /,/ ){ #mutiple wig file
+		@sample_wig_files = split /,/,$wig_list;
+	}
+	elsif( $wig_list =~ /wig$/ or $wig_list =~ /wig\.gz$/){ #single wig file
+		push @sample_wig_files, $wig_list;
+	}
+	elsif( -e $wig_list ){ #file exists, and not a wig file.
+		open FL,"<",$wig_list or die "$wig_list \n wig file open error, Please check up this path!";
+		@sample_wig_files = <FL>;
+
+		map s/[\r\n]$//g,@sample_wig_files;
+
+		close FL;
+	}
+	else{
+		die "wig lists must be a file or a string seperated by comma.\n";
+	}
+	return @sample_wig_files;
+}

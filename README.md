@@ -1,5 +1,6 @@
 
-* Here are the codes used in the study **"Partially erosion on under-methylated regions and chromatin reprogramming contribute to oncogene activation in IDH mutant gliomas"**.
+* Here are the codes used in the study **"Partial erosion on under-methylated regions and chromatin reprogramming contribute to oncogene activation in IDH mutant gliomas"**.
+* Wang X, Dai L, Liu Y, et al. Partial erosion on under-methylated regions and chromatin reprogramming contribute to oncogene activation in IDH mutant gliomas. Epigenetics Chromatin. 2023;16(1):13. Published 2023 Apr 28. doi:10.1186/s13072-023-00490-x
 
 * In this study, we have developed a computational framework to identify aberrant hypermethylation at single-base resolution based on Hidden Markov Model (**See in framework/**).<br><br>
 ![framework](https://github.com/wangxinyush/IDH_phUMR/blob/main/imgs/framework.png "foo")

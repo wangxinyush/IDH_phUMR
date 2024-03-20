@@ -26,8 +26,8 @@ TCGA_DEG <- read.table("E:\\IDH_Hyper\\Results\\4_Gene_Expression\\202112_DEG\\T
 DKFZ_DEG <- read.table("E:\\IDH_Hyper\\Results\\4_Gene_Expression\\202112_DEG\\DKFZ_IDH_DEG_padjust.txt", 
                        header=T, row.names = 1, sep="\t", fill=T, check.names=F, quote="")
 
-##Plot - valcano
-###1. partially genes - DEG valcano
+##Plot - volcano
+###1. partially genes - DEG volcano
 partial_plot_genes <-  unique(intersect(partial_hyper$Symbol, DKFZ_DEG$symbol))
 partial_plot_genes_matrix <- c() #fc, padjust
 for(i in 1:length(partial_plot_genes)){
@@ -49,7 +49,7 @@ points(log2(partial_plot_genes_matrix[partial_up_index,"fc_IDHn"]), -log10(parti
 points(log2(partial_plot_genes_matrix[partial_down_index,"fc_IDHn"]), -log10(partial_plot_genes_matrix[partial_down_index,"padjust_IDHn"]),
        pch=20, col=blue)
 
-###2. fully genes - DEG valcano
+###2. fully genes - DEG volcano
 full_plot_genes <- unique(intersect( setdiff(full_hyper$Symbol, partial_hyper$Symbol), DKFZ_DEG$symbol))
 full_plot_genes <- setdiff(full_plot_genes, c("KIF11", "IL17RD", "IRX2")) #three wrong genes
 full_plot_genes_matrix <- c()
@@ -72,7 +72,7 @@ points(log2(full_plot_genes_matrix[full_up_index,"fc_IDHn"]), -log10(full_plot_g
 points(log2(full_plot_genes_matrix[full_down_index,"fc_IDHn"]), -log10(full_plot_genes_matrix[full_down_index,"padjust_IDHn"]),
        pch=20, col=blue)
 
-###3. partially genes - DEG valcano (only promoter)
+###3. partially genes - DEG volcano (only promoter)
 promoter_partial_genes <- unique(c(as.character(promoter_hyper[which(promoter_hyper$Type == "Patially"), "Symbol"])) )
 
 promoter_partial_plot_genes <- unique(intersect(promoter_partial_genes, DKFZ_DEG$symbol))
@@ -96,7 +96,7 @@ points(log2(promoter_partial_plot_genes_matrix[promoter_partial_up_index,"fc_IDH
 points(log2(promoter_partial_plot_genes_matrix[promoter_partial_down_index,"fc_IDHn"]), -log10(promoter_partial_plot_genes_matrix[promoter_partial_down_index,"padjust_IDHn"]),
        pch=20, col=blue)
 
-###4. fully genes - DEG valcano (only promoter)
+###4. fully genes - DEG volcano (only promoter)
 promoter_full_genes <- unique(c(as.character(promoter_hyper[which(promoter_hyper$Type == "Fully"), "Symbol"])) )
 promoter_full_plot_genes <- unique(intersect( setdiff(promoter_full_genes, promoter_partial_genes), DKFZ_DEG$symbol))
 promoter_full_plot_genes <- setdiff(promoter_full_plot_genes, c("KIF11", "IL17RD", "IRX2")) #three wrong genes
@@ -122,7 +122,7 @@ points(log2(promoter_full_plot_genes_matrix[promoter_full_up_index,"fc_IDHn"]), 
 points(log2(promoter_full_plot_genes_matrix[promoter_full_down_index,"fc_IDHn"]), -log10(promoter_full_plot_genes_matrix[promoter_full_down_index,"padjust_IDHn"]),
        pch=20, col=blue)
 
-###5. partially genes - DEG valcano (only promoter)
+###5. partially genes - DEG volcano (only promoter)
 body_partial_genes <- unique(c(as.character(body_hyper[which(body_hyper$Type == "Patially"), "Symbol"])) )
 
 body_partial_plot_genes <- unique(intersect(body_partial_genes, DKFZ_DEG$symbol))
@@ -146,7 +146,7 @@ points(log2(body_partial_plot_genes_matrix[body_partial_up_index,"fc_IDHn"]), -l
 points(log2(body_partial_plot_genes_matrix[body_partial_down_index,"fc_IDHn"]), -log10(body_partial_plot_genes_matrix[body_partial_down_index,"padjust_IDHn"]),
        pch=20, col=blue)
 
-###6. fully genes - DEG valcano (only promoter)
+###6. fully genes - DEG volcano (only promoter)
 body_full_genes <- unique(c(as.character(body_hyper[which(body_hyper$Type == "Fully"), "Symbol"])) )
 body_full_plot_genes <- unique(intersect( setdiff(body_full_genes, body_partial_genes), DKFZ_DEG$symbol))
 body_full_plot_genes_matrix <- c()
